@@ -38,6 +38,7 @@ public class ContentFragment extends CurrentFragment {
         mReadyToLoad= (String) mBundle.get("url");
         mContentUrl=mReadyToLoad;
         initWebView(mWebView);
+        Log.e(TAG,"Create View!");
         return view;
     }
     @Override

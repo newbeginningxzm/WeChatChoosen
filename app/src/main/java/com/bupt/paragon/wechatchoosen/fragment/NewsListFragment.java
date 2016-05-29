@@ -24,6 +24,8 @@ import com.handmark.pulltorefresh.library.PullToRefreshBase;
 import com.handmark.pulltorefresh.library.PullToRefreshListView;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 
 import retrofit2.Call;
@@ -39,6 +41,7 @@ public class NewsListFragment extends CurrentFragment{
     private DataConverter<News> mConveter;
     private NewsListAdapter<News> mAdapter;
     private ArrayList<News> mData=new ArrayList();
+    private HashSet<String> mLoaded=new HashSet<>();
     private ListFragmentListener<News> mListFragmentListener;
     private int mPage;
     private static final String URL_PAGE="http://v.juhe.cn/weixin/";
@@ -109,24 +112,32 @@ public class NewsListFragment extends CurrentFragment{
             @Override
             public void run() {
                 refreshData();
-                Log.e(TAG,"Refresh In Resume!");
+                Log.e(TAG, "Refresh In Resume!");
             }
-        },200);
+        }, 200);
     }
 
     private void refreshNewsList(List<News> news,int page,int pageCount){
         if(news!=null&&news.size()!=0){
             Log.e("MainActivity", "Get Refresh:" + news.size());
-            for(int i=(page-1)*pageCount,j=0;j<news.size();i++,j++){
-                if(i<mData.size()){
-                    News inData=mData.get(i);
-                    News refresh=news.get(j);
-                    if(!refresh.getId().equals(inData.getId()))
-                        mData.set(i,refresh);
+            for(int j=0;j<news.size();j++){
+                if(mLoaded.contains(news.get(j).getId())){
+                    news.set(j,null);
                 }else{
                     mData.add(news.get(j));
+                    mLoaded.add(news.get(j).getId());
                 }
             }
+//            for(int i=(page-1)*pageCount;j<news.size();i++,j++){
+//                if(i<mData.size()){
+//                    News inData=mData.get(i);
+//                    News refresh=news.get(j);
+//                    if(!refresh.getId().equals(inData.getId()))
+//                        mData.set(i,refresh);
+//                }else{
+//                    mData.add(news.get(j));
+//                }
+//            }
         }
     }
     private class PageCallBack  implements Callback<Response> {
