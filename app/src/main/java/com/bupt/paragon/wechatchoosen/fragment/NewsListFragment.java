@@ -23,6 +23,7 @@ import com.bupt.paragon.wechatchoosen.model.IPageBiz;
 import com.bupt.paragon.wechatchoosen.model.News;
 import com.bupt.paragon.wechatchoosen.model.Response;
 import com.bupt.paragon.wechatchoosen.model.Result;
+import com.bupt.paragon.wechatchoosen.views.ViewFreshListener;
 import com.handmark.pulltorefresh.library.PullToRefreshBase;
 import com.handmark.pulltorefresh.library.PullToRefreshListView;
 
@@ -37,7 +38,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 /**
  * Created by Paragon on 2016/5/28.
  */
-public class NewsListFragment extends CurrentFragment{
+public class NewsListFragment extends CurrentFragment implements ViewFreshListener{
     private PullToRefreshListView mNewsList;
     private DataConverter<News> mConveter;
     private NewsListAdapter<News> mAdapter;
@@ -145,6 +146,17 @@ public class NewsListFragment extends CurrentFragment{
             }
         }
     }
+
+    @Override
+    public void onRefreshSuccess() {
+        
+    }
+
+    @Override
+    public void onRefreshFailed() {
+
+    }
+
     private class PageCallBack  implements Callback<Response> {
         private int mPage;
         private int mPageCount;
