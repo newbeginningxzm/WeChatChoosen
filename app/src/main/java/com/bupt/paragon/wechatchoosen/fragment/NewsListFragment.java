@@ -1,7 +1,5 @@
 package com.bupt.paragon.wechatchoosen.fragment;
 
-import android.app.Fragment;
-import android.nfc.NfcEvent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.Nullable;
@@ -19,40 +17,30 @@ import com.bupt.paragon.wechatchoosen.adapter.DataConverter;
 import com.bupt.paragon.wechatchoosen.adapter.MultiItemTypeSupport;
 import com.bupt.paragon.wechatchoosen.adapter.NewsConverter;
 import com.bupt.paragon.wechatchoosen.adapter.NewsListAdapter;
-import com.bupt.paragon.wechatchoosen.model.IPageBiz;
+import com.bupt.paragon.wechatchoosen.event.NewsListRefreshEvent;
 import com.bupt.paragon.wechatchoosen.model.News;
-import com.bupt.paragon.wechatchoosen.model.Response;
-import com.bupt.paragon.wechatchoosen.model.Result;
-import com.bupt.paragon.wechatchoosen.views.ViewFreshListener;
+import com.bupt.paragon.wechatchoosen.presenter.NewsListPresenter;
+import com.bupt.paragon.wechatchoosen.views.NewsListView;
+import com.bupt.paragon.wechatchoosen.views.ViewRefreshListener;
 import com.handmark.pulltorefresh.library.PullToRefreshBase;
 import com.handmark.pulltorefresh.library.PullToRefreshListView;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
-
-/**
- * Created by Paragon on 2016/5/28.
- */
-public class NewsListFragment extends CurrentFragment implements ViewFreshListener{
+public class NewsListFragment extends CurrentFragment implements ViewRefreshListener, NewsListView {
     private PullToRefreshListView mNewsList;
     private DataConverter<News> mConveter;
     private NewsListAdapter<News> mAdapter;
-    private ArrayList<News> mData=new ArrayList();
+    private ArrayList<News> mData=new ArrayList<>();
     private NewsLruCacheMap mLoaded=new NewsLruCacheMap();
     private ListFragmentListener<News> mListFragmentListener;
     private int mPage,mPageCount=10;
-    private static final String URL_PAGE="http://v.juhe.cn/weixin/";
-    private static final String KEY="8192f5f325d39561037dd6342fead98b";
-    private static final String DATA_TYPE="json";
     private static final String TAG="NewsListFragment";
-    private static final int REFRESH=1,LOADMORE=2;
+    public static final int REFRESH=1,LOADMORE=2;
+    private NewsListPresenter mPresenter=new NewsListPresenter(this);
+
     private Handler mHandler;
-    private PageCallBack  mRefreshCallBack=new PageCallBack(0,10,REFRESH);
     private AdapterView.OnItemClickListener mOnItemClickListener=new AdapterView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -138,7 +126,7 @@ public class NewsListFragment extends CurrentFragment implements ViewFreshListen
                     mData.clear();
                     mPage=1;
                     mLoaded.clear();
-                    for(int j=0,i=0;j<news.size();j++ ){
+                    for(int j=0;j<news.size();j++ ){
                         mData.add(news.get(j));
                         mLoaded.put(news.get(j).getTitle());
                     }
@@ -148,73 +136,37 @@ public class NewsListFragment extends CurrentFragment implements ViewFreshListen
     }
 
     @Override
-    public void onRefreshSuccess() {
-        
+    public int getCurrentPage() {
+        return mPage;
     }
 
     @Override
-    public void onRefreshFailed() {
-
+    public int getCurrentPageCount() {
+        return mPageCount;
     }
 
-    private class PageCallBack  implements Callback<Response> {
-        private int mPage;
-        private int mPageCount;
-        private int mCallType;
-        public void setmCallType(int mCallType) {
-            this.mCallType = mCallType;
-        }
-
-        public PageCallBack(int page,int pageCount,int callType) {
-            super();
-            this.mPage=page;
-            this.mPageCount=pageCount;
-            this.mCallType=callType;
-        }
-
-        @Override
-        public void onResponse(Call<Response> call, retrofit2.Response<Response> response) {
-            Result mResult=response.body().getResult();
-            final List<News> mRefreshData=mResult.getList();
-            NewsListFragment.this.mPage=mResult.getPage();
-            refreshNewsList(mRefreshData, NewsListFragment.this.mPage, mResult.getPageCount(),mCallType);
-            Log.e(TAG, "Get Response:"+mPage);
-            mAdapter.notifyDataSetChanged();
-            mNewsList.onRefreshComplete();
-        }
-
-        @Override
-        public void onFailure(Call<com.bupt.paragon.wechatchoosen.model.Response> call, Throwable t) {
-            Toast.makeText(getActivity(),"Network Error!",Toast.LENGTH_LONG).show();
-            mNewsList.onRefreshComplete();
-        }
-        public int getPageCount() {
-            return mPageCount;
-        }
-
-        public void setPageCount(int mPageCount) {
-            this.mPageCount = mPageCount;
-        }
-
-        public int getPage() {
-            return mPage;
-        }
-
-        public void setPage(int mPage) {
-            this.mPage = mPage;
-        }
+    @Override
+    public void onRefreshSuccess(RefreshEvent event) {
+        NewsListRefreshEvent<News> mEvent= (NewsListRefreshEvent<News>) event;
+        refreshNewsList(mEvent.getmData(), mEvent.getPage(),mEvent.getPage(),mEvent.getType());
+        Log.e(TAG, "Get Response:"+mPage);
+        mAdapter.notifyDataSetChanged();
+        mNewsList.onRefreshComplete();
     }
+
+    @Override
+    public void onRefreshFailed(RefreshEvent event) {
+        Toast.makeText(getActivity(),"Network Error!",Toast.LENGTH_LONG).show();
+        mNewsList.onRefreshComplete();
+    }
+
     private void loadNews(int page,int pageCount,int callType){
-        Retrofit retrofit=new Retrofit.Builder()
-                .baseUrl(URL_PAGE)
-                .addConverterFactory(GsonConverterFactory.create())
+        NewsListRefreshEvent<News> event = new NewsListRefreshEvent.Builder<News>()
+                .setPage(page)
+                .setPageCount(pageCount)
+                .setType(callType)
                 .build();
-        IPageBiz newsBiz=retrofit.create(IPageBiz.class);
-        Call<com.bupt.paragon.wechatchoosen.model.Response> call= newsBiz.getNews(page,pageCount,DATA_TYPE,KEY);
-        mRefreshCallBack.setPage(page);
-        mRefreshCallBack.setPageCount(pageCount);
-        mRefreshCallBack.setmCallType(callType);
-        call.enqueue(mRefreshCallBack);
+        mPresenter.refresh(event);
     }
 
     private void refreshData(){
@@ -224,4 +176,6 @@ public class NewsListFragment extends CurrentFragment implements ViewFreshListen
     private void loadMore(){
         loadNews(mPage+1,mPageCount,LOADMORE);
     }
+
+
 }
