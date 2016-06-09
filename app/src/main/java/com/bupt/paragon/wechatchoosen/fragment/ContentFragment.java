@@ -79,6 +79,9 @@ public class ContentFragment extends CurrentFragment {
         websettings.setJavaScriptEnabled(true);
         mWebView.loadUrl(mContentUrl);
         Log.e(TAG,"Load Web:"+mContentUrl);
+
+        //设置webView的缓存策略
+        websettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
     }
 
 //    @Override

@@ -7,6 +7,8 @@ import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.TextView;
+
 import com.bupt.paragon.wechatchoosen.fragment.ContentFragment;
 import com.bupt.paragon.wechatchoosen.fragment.NewsListFragment;
 import com.bupt.paragon.wechatchoosen.fragment.ListFragmentListener;
@@ -28,15 +30,17 @@ public class MainActivity extends AppCompatActivity implements ListFragmentListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        init();
+        init(savedInstanceState);
     }
 
-    private void init(){
-        mFragmentManager=getFragmentManager();
-        mListFragment=new NewsListFragment();
-        FragmentTransaction transaction=mFragmentManager.beginTransaction()
-                .add(R.id.id_main_content, mListFragment, TAG_LISTFRAGMENT);
-        transaction.commit();
+    private void init(Bundle savedInstanceState){
+        if(savedInstanceState==null){
+            mFragmentManager=getFragmentManager();
+            mListFragment=new NewsListFragment();
+            FragmentTransaction transaction=mFragmentManager.beginTransaction()
+                    .add(R.id.id_main_content, mListFragment, TAG_LISTFRAGMENT);
+            transaction.commit();
+        }
     }
 
     private void switchFragment(Fragment from,Fragment to){

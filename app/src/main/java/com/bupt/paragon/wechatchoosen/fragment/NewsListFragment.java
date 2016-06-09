@@ -1,6 +1,7 @@
 package com.bupt.paragon.wechatchoosen.fragment;
 
 import android.app.Fragment;
+import android.nfc.NfcEvent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.Nullable;
@@ -10,7 +11,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.Toast;
 
+import com.bupt.paragon.wechatchoosen.NewsLruCacheMap;
 import com.bupt.paragon.wechatchoosen.R;
 import com.bupt.paragon.wechatchoosen.adapter.DataConverter;
 import com.bupt.paragon.wechatchoosen.adapter.MultiItemTypeSupport;
@@ -24,8 +27,6 @@ import com.handmark.pulltorefresh.library.PullToRefreshBase;
 import com.handmark.pulltorefresh.library.PullToRefreshListView;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 
 import retrofit2.Call;
@@ -41,15 +42,16 @@ public class NewsListFragment extends CurrentFragment{
     private DataConverter<News> mConveter;
     private NewsListAdapter<News> mAdapter;
     private ArrayList<News> mData=new ArrayList();
-    private HashSet<String> mLoaded=new HashSet<>();
+    private NewsLruCacheMap mLoaded=new NewsLruCacheMap();
     private ListFragmentListener<News> mListFragmentListener;
-    private int mPage;
+    private int mPage,mPageCount=10;
     private static final String URL_PAGE="http://v.juhe.cn/weixin/";
     private static final String KEY="8192f5f325d39561037dd6342fead98b";
     private static final String DATA_TYPE="json";
     private static final String TAG="NewsListFragment";
+    private static final int REFRESH=1,LOADMORE=2;
     private Handler mHandler;
-    private PageCallBack  mRefreshCallBack=new PageCallBack(0,10,PageCallBack.REFRESH);
+    private PageCallBack  mRefreshCallBack=new PageCallBack(0,10,REFRESH);
     private AdapterView.OnItemClickListener mOnItemClickListener=new AdapterView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -90,6 +92,7 @@ public class NewsListFragment extends CurrentFragment{
             }
         });
         mNewsList.setMode(PullToRefreshBase.Mode.BOTH);
+        mNewsList.setRefreshing(true);
         return view;
     }
 
@@ -117,31 +120,32 @@ public class NewsListFragment extends CurrentFragment{
         }, 200);
     }
 
-    private void refreshNewsList(List<News> news,int page,int pageCount){
+    private void refreshNewsList(List<News> news,int page,int pageCount,int type){
         if(news!=null&&news.size()!=0){
             Log.e("MainActivity", "Get Refresh:" + news.size());
-            for(int j=0;j<news.size();j++){
-                if(mLoaded.contains(news.get(j).getId())){
-                    news.set(j,null);
-                }else{
-                    mData.add(news.get(j));
-                    mLoaded.add(news.get(j).getId());
+            switch (type){
+                case LOADMORE:{
+                    for(int j=0;j<news.size();j++){
+                        if(!mLoaded.containsKey(news.get(j).getTitle())){
+                            mData.add(news.get(j)); //不包含则加入List
+                            mLoaded.put(news.get(j).getTitle());   //将新的News加入缓存
+                        }
+                    }
+                }
+                break;
+                case REFRESH:{
+                    mData.clear();
+                    mPage=1;
+                    mLoaded.clear();
+                    for(int j=0,i=0;j<news.size();j++ ){
+                        mData.add(news.get(j));
+                        mLoaded.put(news.get(j).getTitle());
+                    }
                 }
             }
-//            for(int i=(page-1)*pageCount;j<news.size();i++,j++){
-//                if(i<mData.size()){
-//                    News inData=mData.get(i);
-//                    News refresh=news.get(j);
-//                    if(!refresh.getId().equals(inData.getId()))
-//                        mData.set(i,refresh);
-//                }else{
-//                    mData.add(news.get(j));
-//                }
-//            }
         }
     }
     private class PageCallBack  implements Callback<Response> {
-        public static final int REFRESH=1,LOAD_MORE=2;
         private int mPage;
         private int mPageCount;
         private int mCallType;
@@ -161,15 +165,16 @@ public class NewsListFragment extends CurrentFragment{
             Result mResult=response.body().getResult();
             final List<News> mRefreshData=mResult.getList();
             NewsListFragment.this.mPage=mResult.getPage();
-            refreshNewsList(mRefreshData, NewsListFragment.this.mPage, mResult.getPageCount());
-            Log.e(TAG, "Get Response!");
+            refreshNewsList(mRefreshData, NewsListFragment.this.mPage, mResult.getPageCount(),mCallType);
+            Log.e(TAG, "Get Response:"+mPage);
             mAdapter.notifyDataSetChanged();
             mNewsList.onRefreshComplete();
         }
 
         @Override
         public void onFailure(Call<com.bupt.paragon.wechatchoosen.model.Response> call, Throwable t) {
-
+            Toast.makeText(getActivity(),"Network Error!",Toast.LENGTH_LONG).show();
+            mNewsList.onRefreshComplete();
         }
         public int getPageCount() {
             return mPageCount;
@@ -201,10 +206,10 @@ public class NewsListFragment extends CurrentFragment{
     }
 
     private void refreshData(){
-        loadNews(0, 10, PageCallBack.REFRESH);
+        loadNews(0,mPageCount, REFRESH);
     }
 
     private void loadMore(){
-        loadNews(mPage+1,10,PageCallBack.LOAD_MORE);
+        loadNews(mPage+1,mPageCount,LOADMORE);
     }
 }

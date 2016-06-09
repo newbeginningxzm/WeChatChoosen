@@ -36,4 +36,15 @@
         android:textColor="@android:color/darker_gray"
         android:textStyle="bold"
         />
+    <TextView
+        android:id="@+id/id_item_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@id/item_firstImg"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="10dp"
+        android:text="2016年5月30日"
+        android:textSize="10sp"
+        android:textColor="@android:color/darker_gray"
+        android:textStyle="bold"/>
 </RelativeLayout>
